@@ -31,8 +31,10 @@ import (
 const serverBucket = "lb:servers"
 
 // NewServerStorage creates a new ServerStorage
-func NewServerStorage(db *bolt.DB, log logr.Logger) (db.ServerStorage, error) {
-	s := &serverStorage{}
+func NewServerStorage(log logr.Logger, db *bolt.DB, hub db.EventHub) (db.ServerStorage, error) {
+	s := &serverStorage{
+		hub: hub,
+	}
 	s.base = &baseStorage{
 		log: log,
 
@@ -42,11 +44,25 @@ func NewServerStorage(db *bolt.DB, log logr.Logger) (db.ServerStorage, error) {
 		fromStorage: fromStorageFn(s.fromStorage),
 		key:         keyFn(s.key),
 	}
-	return s, s.base.init()
+	if err := s.base.init(); err != nil {
+		return nil, err
+	}
+
+	// broadcast all existing objects
+	list, err := s.All(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	for _, obj := range list {
+		hub.Broadcast(nil, obj)
+	}
+
+	return s, nil
 }
 
 type serverStorage struct {
 	base *baseStorage
+	hub  db.EventHub
 }
 
 func (s *serverStorage) Delete(ctx context.Context, obj *api.Server) (deleted *api.Server, err error) {
@@ -55,6 +71,9 @@ func (s *serverStorage) Delete(ctx context.Context, obj *api.Server) (deleted *a
 		return
 	}
 	deleted = o.(*api.Server)
+	if deleted != nil {
+		s.hub.Broadcast(deleted, nil)
+	}
 	return
 }
 
@@ -63,11 +82,13 @@ func (s *serverStorage) Create(ctx context.Context, obj *api.Server) (err error)
 	if err != nil {
 		return
 	}
+	s.hub.Broadcast(nil, obj)
 	return
 }
 
 func (s *serverStorage) Update(ctx context.Context, obj *api.Server) (err error) {
-	_, _, err = s.base.Update(obj, func(old, new api.Object) {
+	var o, n api.Object
+	o, n, err = s.base.Update(obj, func(old, new api.Object) {
 		oldObj := old.(*api.Server)
 		newObj := new.(*api.Server)
 
@@ -77,11 +98,13 @@ func (s *serverStorage) Update(ctx context.Context, obj *api.Server) (err error)
 		// do not update the status
 		newObj.Status = oldObj.Status
 	})
+	s.hub.Broadcast(o, n)
 	return
 }
 
 func (s *serverStorage) UpdateStatus(ctx context.Context, obj *api.Server) (err error) {
-	_, _, err = s.base.Update(obj, func(old, new api.Object) {
+	var o, n api.Object
+	o, n, err = s.base.Update(obj, func(old, new api.Object) {
 		oldObj := old.(*api.Server)
 		newObj := new.(*api.Server)
 
@@ -89,6 +112,7 @@ func (s *serverStorage) UpdateStatus(ctx context.Context, obj *api.Server) (err 
 		newObj.Spec = oldObj.Spec
 		newObj.ObjectMeta = oldObj.ObjectMeta
 	})
+	s.hub.Broadcast(o, n)
 	return
 }
 

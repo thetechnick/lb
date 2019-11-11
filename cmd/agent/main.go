@@ -27,6 +27,7 @@ import (
 
 	v1 "github.com/thetechnick/lb/pkg/api/v1"
 	v1services "github.com/thetechnick/lb/pkg/api/v1/services"
+	"github.com/thetechnick/lb/pkg/storage"
 	boltdb "github.com/thetechnick/lb/pkg/storage/bolt"
 )
 
@@ -54,8 +55,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	eventHub := storage.NewEventHub()
+	go eventHub.Run()
+
 	s := grpc.NewServer()
-	serverStorage, err := boltdb.NewServerStorage(boltDB, log)
+	serverStorage, err := boltdb.NewServerStorage(log, boltDB, eventHub)
 	if err != nil {
 		log.Error(err, "creating server storage")
 		os.Exit(1)

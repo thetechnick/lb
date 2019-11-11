@@ -35,7 +35,6 @@ type fromStorageFn func(b []byte) (obj api.Object, err error)
 type updateHook func(old, new api.Object)
 type keyFn func(obj api.Object) []byte
 
-var noopUpdateHook = func(old, new api.Object) {}
 var errBucketNotFound = errors.New("bucket not found")
 
 type baseStorage struct {
@@ -46,7 +45,6 @@ type baseStorage struct {
 	toStorage   toStorageFn
 	fromStorage fromStorageFn
 	key         keyFn
-	updateHook  updateHook
 }
 
 func (s *baseStorage) init() error {
