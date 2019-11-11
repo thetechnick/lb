@@ -1,0 +1,68 @@
+// Copyright 2019 The LB Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package lb.api.v1;
+option go_package = "v1";
+
+import "meta.proto";
+import "condition.proto";
+
+message ServerList {
+  ListMeta metadata = 1;
+  repeated Server items = 2;
+}
+
+message Server {
+  ObjectMeta metadata = 1;
+  ServerSpec spec = 2;
+  ServerStatus status = 3;
+}
+
+message ServerSpec {
+  // endpoint ips/hostnames
+  repeated string endpoints = 1;
+  repeated ServerPort ports = 2;
+}
+
+message ServerPort {
+  int32 port = 1;
+  // tcp or udp
+  string protocol = 2;
+}
+
+message ServerStatus {
+  repeated Condition conditions = 1;
+  repeated ServerIngress ingress = 2;
+}
+
+message ServerIngress {
+  string ip = 1;
+}
+
+// Requests/Responses
+message ServerListRequest{}
+message ServerShowRequest{
+  string name = 1;
+}
+
+service ServerService {
+  rpc Create(Server) returns (Server) {};
+  rpc List(ServerListRequest) returns (ServerList) {};
+  rpc Show(ServerShowRequest) returns (Server) {};
+  rpc Update(Server) returns (Server) {};
+  rpc UpdateStatus(Server) returns (Server) {};
+  rpc Delete(Server) returns (Server) {};
+}
