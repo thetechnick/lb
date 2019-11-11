@@ -16,6 +16,55 @@ limitations under the License.
 
 package main
 
-func main() {
+import (
+	"net"
+	"os"
 
+	"github.com/boltdb/bolt"
+	"google.golang.org/grpc"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	v1 "github.com/thetechnick/lb/pkg/api/v1"
+	v1services "github.com/thetechnick/lb/pkg/api/v1/services"
+	boltdb "github.com/thetechnick/lb/pkg/storage/bolt"
+)
+
+const (
+	port = ":50051"
+)
+
+func main() {
+	ctrl.SetLogger(zap.New(func(options *zap.Options) {
+		options.Development = true
+	}))
+
+	log := ctrl.Log.WithName("agent")
+
+	boltDB, err := bolt.Open("lb.db", 0600, nil)
+	if err != nil {
+		log.Error(err, "open database")
+		os.Exit(1)
+	}
+	defer boltDB.Close()
+
+	lis, err := net.Listen("tcp", port)
+	if err != nil {
+		log.Error(err, "listen")
+		os.Exit(1)
+	}
+
+	s := grpc.NewServer()
+	serverStorage, err := boltdb.NewServerStorage(boltDB, log)
+	if err != nil {
+		log.Error(err, "creating server storage")
+		os.Exit(1)
+	}
+
+	v1.RegisterServerServiceServer(s, v1services.NewServerService(log, serverStorage))
+
+	if err := s.Serve(lis); err != nil {
+		log.Error(err, "serve")
+		os.Exit(1)
+	}
 }

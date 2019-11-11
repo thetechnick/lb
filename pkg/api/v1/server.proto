@@ -57,6 +57,9 @@ message ServerListRequest{}
 message ServerShowRequest{
   string name = 1;
 }
+message ServerDeleteRequest{
+  string name = 1;
+}
 
 service ServerService {
   rpc Create(Server) returns (Server) {};
@@ -64,5 +67,5 @@ service ServerService {
   rpc Show(ServerShowRequest) returns (Server) {};
   rpc Update(Server) returns (Server) {};
   rpc UpdateStatus(Server) returns (Server) {};
-  rpc Delete(Server) returns (Server) {};
+  rpc Delete(ServerDeleteRequest) returns (Server) {};
 }

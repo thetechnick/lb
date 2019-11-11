@@ -22,6 +22,9 @@ BUILD_DATE=$(shell date +%s)
 MODULE=github.com/thetechnick/lb
 LD_FLAGS="-w -X '$(MODULE)/pkg/version.Version=$(VERSION)' -X '$(MODULE)/pkg/version.Branch=$(BRANCH)' -X '$(MODULE)/pkg/version.Commit=$(SHORT_SHA)' -X '$(MODULE)/pkg/version.BuildDate=$(BUILD_DATE)'"
 
+all: \
+	bin/linux_amd64/agent
+
 bin/linux_amd64/%: GOARGS = GOOS=linux GOARCH=amd64
 
 bin/%: FORCE generate
